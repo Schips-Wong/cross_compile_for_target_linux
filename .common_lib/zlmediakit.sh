@@ -23,6 +23,8 @@ export ZLMEDIAKIT_OUTPUT_PATH_HOST=${OUTPUT_PATH_HOST}/${ZLMEDIAKIT}
 export USING_OPENSSL_FOR_ZLMEDIAKIT=""
 ## FFmpeg
 export USING_FFMPEG_FOR_ZLMEDIAKIT=""
+## WebRTC(基于LIBSRTP)
+export USING_LIBSRTP_FOR_ZLMEDIAKIT=""
 
 
 export OPENSSL_FOR_ZLMEDIAKIT=""
@@ -43,6 +45,14 @@ function _sync_export_var_zlmediakit()
     else
         export FFMPEG_FOR_ZLMEDIAKIT="no"
     fi
+
+    if [ "$USING_LIBSRTP_FOR_ZLMEDIAKIT" = "y" ];then
+        export LIBSRTP_FOR_ZLMEDIAKIT="yes"
+        export OPENSSL_FOR_ZLMEDIAKIT="yes"
+    else
+        export LIBSRTP_FOR_ZLMEDIAKIT="no"
+    fi
+
 }
 
 function get_zlmediakit () {
@@ -54,12 +64,16 @@ function get_zlmediakit () {
     if [ "$FFMPEG_FOR_ZLMEDIAKIT" = "yes" ];then
         get_ffmpeg
     fi
+    if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+        get_libsrtp
+    fi
+
 
     tgit_with_bracnch_and_submod  $ZLMEDIAKIT_URL $CONFIG_ZLMEDIAKIT_VERSION
 }
 
 function mk_zlmediakit () {
-    local build_for_host="$1"
+    local build_for_host="$1" # say y for host
 
     local openssl_cmake_part_arg="-DENABLE_OPENSSL=off"
     local build_for_host_cmake_part_arg=""
@@ -70,12 +84,36 @@ function mk_zlmediakit () {
 
     cd ${CODE_PATH}/${ZLMEDIAKIT_VERSION} || return 1
 
+    local webrtc_cmake_part_arg=""
+    local openssl_install_dir=""
+    local ffmpeg_install_dir=""
+    local libsrtp_install_dir=""
+    if [  "$build_for_host" == 'y' ];then
+        openssl_install_dir="$OPENSSL_OUTPUT_PATH_HOST"
+        ffmpeg_install_dir="$FFMPEG_OUTPUT_PATH_HOST"
+        libsrtp_install_dir="$LIBSRTP_OUTPUT_PATH_HOST"
+    else
+        openssl_install_dir="$OPENSSL_OUTPUT_PATH"
+        ffmpeg_install_dir="$FFMPEG_OUTPUT_PATH"
+        libsrtp_install_dir="$LIBSRTP_OUTPUT_PATH"
+    fi
+
     if [ "$OPENSSL_FOR_ZLMEDIAKIT" = "yes" ];then
-        pkg_config_path_add="$OPENSSL_OUTPUT_PATH/lib/pkgconfig:$pkg_config_path_add";
+        pkg_config_path_add="$openssl_install_dir/lib/pkgconfig:$pkg_config_path_add";
+        openssl_cmake_part_arg="-DENABLE_OPENSSL=on"
+    else
+        openssl_cmake_part_arg="-DENABLE_OPENSSL=off"
     fi
 
     if [ "$FFMPEG_FOR_ZLMEDIAKIT" = "yes" ];then
-        pkg_config_path_add="$FFMPEG_OUTPUT_PATH/lib/pkgconfig:$pkg_config_path_add";
+        pkg_config_path_add="$ffmpeg_install_dir/lib/pkgconfig:$pkg_config_path_add";
+    fi
+
+    if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+        pkg_config_path_add="$libsrtp_install_dir/lib/pkgconfig:$pkg_config_path_add";
+        webrtc_cmake_part_arg="-DENABLE_WEBRTC=on"
+    else
+        webrtc_cmake_part_arg="-DENABLE_WEBRTC=off"
     fi
 
     if [  "$build_for_host" == 'y' ];then
@@ -94,12 +132,11 @@ cat <<EOF > $tmp_config
     mkdir -p build
     cd build
     cmake ..  $openssl_cmake_part_arg $build_for_host_cmake_part_arg \
-        $output_cmake_part_arg \
+        $output_cmake_part_arg $webrtc_cmake_part_arg   \
         -DCMAKE_BUILD_TYPE=Release  \
         -DENABLE_HLS=off            \
         -DENABLE_HLS_FMP4=off       \
         -DENABLE_MYSQL=off          \
-        -DENABLE_WEBRTC=off         \
         -DDISABLE_REPORT=on         \
         -DENABLE_MP4=on             \
         -DENABLE_SRT=off            \
@@ -134,10 +171,17 @@ function make_zlmediakit () {
     tar_package       || return 1
 
     if [ "$OPENSSL_FOR_ZLMEDIAKIT" = "yes" ];then
-        make_ssl || return 1
+        if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+            echo "Skip this openssl, as libsrtp will build it too."
+        else
+            make_openssl || return 1
+        fi
     fi
     if [ "$FFMPEG_FOR_ZLMEDIAKIT" = "yes" ];then
         make_ffmpeg || return 1
+    fi
+    if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+        make_libsrtp
     fi
     mk_zlmediakit
 }
@@ -148,10 +192,17 @@ function make_zlmediakit_host () {
     tar_package       || return 1
 
     if [ "$OPENSSL_FOR_ZLMEDIAKIT" = "yes" ];then
-        make_ssl_host || return 1
+        if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+            echo "Skip this openssl, as libsrtp will build it too."
+        else
+            make_openssl_host || return 1
+        fi
     fi
     if [ "$FFMPEG_FOR_ZLMEDIAKIT" = "yes" ];then
         make_ffmpeg_host || return 1
+    fi
+    if [ "$LIBSRTP_FOR_ZLMEDIAKIT" = "yes" ];then
+        make_libsrtp_host
     fi
     mk_zlmediakit  y
 }
