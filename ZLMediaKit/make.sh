@@ -23,8 +23,10 @@ export X265_OUTPUT_PATH_HOST=${ZLMEDIAKIT_OUTPUT_PATH_HOST}
 ######## 是否使用外部组件（默认禁用，写y启用） ########
 ## OpenSSL
 export USING_OPENSSL_FOR_ZLMEDIAKIT="y"
+export CONFIG_OPENSSL=1.1.1k
 ## FFmpeg
 export USING_FFMPEG_FOR_ZLMEDIAKIT="y"
+#export CONFIG_FFMPEG_VERSION=4.2.10
 
 # libx264 Config(启用ffmpeg时有效)
 ### 通过y/n来配置libx264是否启用ASM（默认禁用）
