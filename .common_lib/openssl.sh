@@ -10,6 +10,7 @@ export OPENSSL_ARCH_PATH=$ROOT_DIR/openssl/compressed/${OPENSSL_FILE_NAME}
 
 function _sync_export_var_openssl()
 {
+    export OPENSSL_VERSION=openssl-$CONFIG_OPENSSL
     export OPENSSL_FILE_NAME=${OPENSSL_VERSION}.tar.gz
     export OPENSSL_ARCH_PATH=$ROOT_DIR/openssl/compressed/${OPENSSL_FILE_NAME}
 }
@@ -76,11 +77,18 @@ function make_ssl () {
     tar_package       || return 1
     mk_ssl || return 1
 }
+function make_openssl () {
+    make_ssl
+}
 
 function make_ssl_host () {
     _sync_export_var_openssl
     get_ssl
     tar_package       || return 1
     mk_ssl host || return 1
+}
+
+function make_openssl_host () {
+    make_ssl_host
 }
 
