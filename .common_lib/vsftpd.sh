@@ -65,6 +65,15 @@ EOF
 EOF
     bash $tmp_config || return 1
     gen_vsftpd_helper > $vsftpd_install_dir/install_help.sh
+
+    cat <<EOF >>  $vsftpd_install_dir/vsftpd.conf
+# 添加一个有效用户
+ftp_username=root
+
+seccomp_sandbox=NO
+isolate_network=NO
+allow_writeable_chroot=YES
+EOF
 }
 
 function gen_vsftpd_helper()
@@ -74,12 +83,23 @@ cp     vsftpd.conf /etc/vsftpd.conf
 chmod    775       /etc/vsftpd.conf
 mkdir    -p        /usr/share/empty
 
+mkdir    -p        /var/ftp
+chmod 755          /var/ftp
+chown root:root    /var/ftp
+
+mkdir    -p        /etc/vsftpd/
+touch /etc/vsftpd/chroot_list
+
 cp sbin/vsftpd     /sbin/
 rm   lib/*.a
 rm lib64/*.a
 
 cp lib64/*         /lib64/  2>/dev/null
-cp   lib/*           /lib/  2>/dev/null
+cp   lib/*         /lib/  2>/dev/null
+mkdir    -p        /var/log
+
+echo "adding user [nobody]"
+adduser            nobody
 EOF
 }
 
