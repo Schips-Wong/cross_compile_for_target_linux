@@ -1,3 +1,5 @@
+export CONFIG_OPENSSL_STATIC_BULID=n
+
 export OPENSSL=openssl
 export CONFIG_OPENSSL=1.0.2t
 export OPENSSL_VERSION=openssl-$CONFIG_OPENSSL
@@ -59,10 +61,16 @@ function mk_ssl () {
         build_for_host_part_arg="CC=${_CC}"
         output_dir="$OPENSSL_OUTPUT_PATH"
     fi
+    local static_config_cmd_part=""
+    if [  "$CONFIG_OPENSSL_STATIC_BULID" != 'n' ];then
+        static_config_cmd_part="-fPIC no-shared"
+    else
+        static_config_cmd_part="shared"
+    fi
 
     cd ${CODE_PATH}/${OPENSSL_VERSION}
     cat <<EOF > $tmp_config
-    ${build_for_host_part_arg} ./config no-asm shared --prefix=${output_dir}
+    ${build_for_host_part_arg} ./config no-asm ${static_config_cmd_part} --prefix=${output_dir}
     make clean
 
     sed 's/-m64//g'  -i Makefile # 删除-m64 关键字 (arm-gcc 不一定支持)
