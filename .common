@@ -51,24 +51,57 @@ if [ -z "${BUILD_HOST}"  ]; then
 else
    export BUILD_HOST_=${BUILD_HOST}-
 fi
-export _CC="${BUILD_HOST_}gcc"
-export _CPP="${BUILD_HOST_}g++"
-export _CXX="${BUILD_HOST_}g++"
-export _LD="${BUILD_HOST_}ld"
-export _AR="${BUILD_HOST_}ar"
-export _RANLIB="${BUILD_HOST_}ranlib"
-export _STRIP="${BUILD_HOST_}strip"
 
+## 内建工具链变量
+export _CC
+export _CPP
+export _CXX
+export _LD
+export _AR
+export _RANLIB
+export _STRIP
 
-function set_compile_env_for_target () {
-    export CC=${_CC}
-    export CXX=${_CXX}
-    export AR=${_AR}
-    export LD=${_LD}
-    export RANLIB=${_RANLIB}
-    export STRIP=${_STRIP}
-}
+if [ -z "$SET_FORCE_CC" ];then
+    export _CC="${BUILD_HOST_}gcc"
+else
+    export _CC="$SET_FORCE_CC"
+fi
 
+if [ -z "$SET_FORCE_CPP" ];then
+    export _CPP="${BUILD_HOST_}g++"
+else
+    export _CPP="$SET_FORCE_CPP"
+fi
+
+if [ -z "$SET_FORCE_CXX" ];then
+    export _CXX="${SET_FORCE_CXX}g++"
+else
+    export _CXX="$SET_FORCE_CXX"
+fi
+
+if [ -z "$SET_FORCE_LD" ];then
+    export _LD="${BUILD_HOST_}ld"
+else
+    export _LD="$SET_FORCE_LD"
+fi
+
+if [ -z "$SET_FORCE_AR" ];then
+    export _AR="${BUILD_HOST_}ar"
+else
+    export _AR="$SET_FORCE_AR"
+fi
+
+if [ -z "$SET_FORCE_RANLIB" ];then
+    export _RANLIB="${BUILD_HOST_}ranlib"
+else
+    export _RANLIB="$SET_FORCE_RANLIB"
+fi
+
+if [ -z "$SET_FORCE_STRIP" ];then
+    export _STRIP="${BUILD_HOST_}strip"
+else
+    export _STRIP="$SET_FORCE_STRIP"
+fi
 
 ## 添加环境变量
 if [ -d "${BUILD_HOST_PATH}"  ]; then
