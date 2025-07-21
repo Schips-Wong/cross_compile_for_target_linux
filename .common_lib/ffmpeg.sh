@@ -42,6 +42,8 @@ set_ffmpeg()
     fi
 
     export FFMPEG_VERSION=${FFMPEG}-${CONFIG_FFMPEG_VERSION}
+    export FFMPEG_FILE_NAME=${FFMPEG_VERSION}.tar.bz2
+    export FFMPEG_ARCH_PATH=$ROOT_DIR/ffmpeg/compressed/${FFMPEG_FILE_NAME}
 }
 
 get_ffmpeg () {

@@ -8,7 +8,7 @@ source ../.common
 
 ########### 指定版本
 #export CONFIG_FFMPEG_VERSION=4.2.10
-#export CONFIG_X264_VERSION=snapshot-20191217-2245
+#export CONFIG_X264_VERSION=snapshot-20191217-2245-stable
 #export CONFIG_X265_VERSION=3.5
 
 
