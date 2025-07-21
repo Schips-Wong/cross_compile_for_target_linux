@@ -1,5 +1,5 @@
 export X264=x264
-export CONFIG_X264_VERSION=snapshot-20191217-2245
+export CONFIG_X264_VERSION=snapshot-20191217-2245-stable
 export X264_VERSION=${X264}-${CONFIG_X264_VERSION}
 ## for others
 export X264_FILE_NAME=${X264_VERSION}.tar.bz2
