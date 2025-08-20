@@ -3,6 +3,8 @@ export NTP=ntp
 export CONFIG_NTP_VERSION=4.2.8p17
 export NTP_VERSION=${NTP}-${CONFIG_NTP_VERSION}
 
+# 通过y/n来配置ntp是否附带openssl选项（其实并不能关闭openssl选项）
+export USING_OPENSSL_FOR_NTP
 #export CONFIG_NTP_SERVER_IP
 #export CONFIG_NTP_OTHER_SERVER_IP
 #export CONFIG_NTP_SERVER_DRIFTFILE
@@ -15,11 +17,44 @@ export CONFIG_NTP_SERVER_DRIFTFILE_DEFAULT="/var/ntp/drift"
 export CONFIG_NTP_SERVER_PIDFILE_DEFAULT="/var/run/ntpd.pid"
 export CONFIG_NTP_SERVER_LOGFILE_DEFAULT="/var/log/ntp.log"
 
-NTP_OUTPUT=${OUTPUT_PATH}/${NTP}
+export NTP_OUTPUT_PATH=${OUTPUT_PATH}/${NTP}
+export NTP_OUTPUT_PATH_HOST=${OUTPUT_PATH_HOST}/${NTP}
+
+function _sync_export_var_udhcp()
+{
+    export USING_OPENSSL_FOR_NTP=y # openssl必须打开，否则编译失败
+    export OPENSSL_FOR_NTP="yes"
+    #if [ "$USING_OPENSSL_FOR_NTP" = "n" ];then
+    #    export OPENSSL_FOR_NTP="no"
+    #else
+    #    export OPENSSL_FOR_NTP="yes"
+    #fi
+    if [ -z "$CONFIG_NTP_SERVER_IP" ];then
+        export CONFIG_NTP_SERVER_IP="$CONFIG_NTP_SERVER_IP_DEFAULT"
+    fi
+    if [ -z "$CONFIG_NTP_OTHER_SERVER_IP" ];then
+        export CONFIG_NTP_OTHER_SERVER_IP="$CONFIG_NTP_OTHER_SERVER_IP_DEFAULT"
+    fi
+    if [ -z "$CONFIG_NTP_SERVER_DRIFTFILE" ];then
+        export CONFIG_NTP_SERVER_DRIFTFILE="$CONFIG_NTP_SERVER_DRIFTFILE_DEFAULT"
+    fi
+
+    if [ -z "$CONFIG_NTP_SERVER_PIDFILE" ];then
+        export CONFIG_NTP_SERVER_PIDFILE="$CONFIG_NTP_SERVER_PIDFILE_DEFAULT"
+    fi
+    if [ -z "$CONFIG_NTP_SERVER_LOGFILE" ];then
+        export CONFIG_NTP_SERVER_LOGFILE="$CONFIG_NTP_SERVER_LOGFILE_DEFAULT"
+    fi
+    export NTP_OUTPUT_PATH=${OUTPUT_PATH}/${NTP}
+    export NTP_OUTPUT_PATH_HOST=${OUTPUT_PATH_HOST}/${NTP}
+}
 
 #下载包
 download_ntp () {
-    get_ssl
+    _sync_export_var_udhcp
+    if [ "$OPENSSL_FOR_NTP" = "yes" ];then
+        get_ssl
+    fi
     #echo "https://downloads.nwtime.org/ntp/"
 
     # e.g :
@@ -32,36 +67,73 @@ download_ntp () {
 
 
 mk_ntp () {
-    clear
-    clear
-    clear
-    clear
+    _sync_export_var_udhcp
+    local build_for_host="$1" # say anything for host
+
+    local build_for_host_part_arg=""
+    local build_for_openssl_dir_part_arg=""
+    local output_dir=""
+    local openssl_dir="${OPENSSL_OUTPUT_PATH}"
+    local build_type="target"
+    local make_for_host_part_arg_gcc=""
+    local make_for_cflags_part_arg=""
+
+    if [  "$build_for_host" != '' ];then
+        build_for_host_part_arg="CC=gcc"
+        openssl_dir="${OPENSSL_OUTPUT_PATH_HOST}"
+        output_dir="$NTP_OUTPUT_PATH_HOST"
+        make_for_host_part_arg_gcc=""
+        build_type="host"
+    else
+        build_for_host_part_arg="--host=${BUILD_HOST} --target=arm-linux"
+        openssl_dir="${OPENSSL_OUTPUT_PATH}"
+        output_dir="$NTP_OUTPUT_PATH"
+        make_for_host_part_arg_gcc="LD=${_LD} CC=${_CC}"
+        build_type="target"
+    fi
+    if [ "$CONFIG_OPENSSL_STATIC_BULID" != "n" ]; then
+        make_for_cflags_part_arg=""
+    else
+        make_for_cflags_part_arg="CFLAGS=\"-L${openssl_dir}/lib -I${openssl_dir}/include -lssl -lcrypto -ldl -fPIC\""
+    fi
+
+    #if [ "$OPENSSL_FOR_NTP" != "yes" ];then
+    #    build_for_openssl_dir_part_arg="--without-openssl"
+    #    make_for_cflags_part_arg="CFLAGS=\"-ldl -fPIC\""
+    #else
+    #    build_for_openssl_dir_part_arg="--with-openssl-libdir=${openssl_dir}/lib --with-openssl-incdir=${openssl_dir}/include"
+    #    if [ "$CONFIG_OPENSSL_STATIC_BULID" != "n" ]; then
+    #        make_for_cflags_part_arg="CFLAGS=\"-ldl -fPIC\""
+    #    else
+    #        make_for_cflags_part_arg="CFLAGS=\"-L${openssl_dir}/lib -I${openssl_dir}/include -lssl -lcrypto -ldl -fPIC\""
+    #    fi
+    #fi
+
+    cd ${CODE_PATH}/${NTP_VERSION}
 (
     cat <<EOF
-    cd ${CODE_PATH}/*${NTP_VERSION}*
-    export LD=${_LD}
-    export CC=${_CC}
-    # 自行替换 openssl 的路径
-    ./configure --host=${BUILD_HOST} --target=arm-linux \
-        --prefix=${NTP_OUTPUT}  \
+    ./configure $build_for_host_part_arg \
+        --prefix=${output_dir}  \
     --disable-shared --with-yielding-select=no \
-    --with-openssl-libdir=${OUTPUT_PATH}/${OPENSSL}/lib \
-    --with-openssl-incdir=${OUTPUT_PATH}/${OPENSSL}/include \
-    CFLAGS="-O2 -g -fPIC"
+    ${build_for_openssl_dir_part_arg}
     #--without-sntp --with-ntpsnmpd=no
 
-    make $MKTHD LD=${_LD} CC=${_CC} || exit
+    make $make_for_host_part_arg_gcc $MKTHD $make_for_cflags_part_arg || exit
     make install
 EOF
-) > .build.ntp.sh
+) > .build.ntp.${build_type}.sh
 
-    bash `pwd`/.build.ntp.sh
+    bash .build.ntp.${build_type}.sh
 }
 
-gen_ntp_client_usage()
+gen_ntp_usage()
 {
+    echo "Install to [$1]"
+    local install_top="$1"
+    network_ip=`echo ${CONFIG_NTP_SERVER_IP%.*}.0`
 (
     cat<<EOF
+CONFIG_NTP_SERVER_IP=$CONFIG_NTP_SERVER_IP
 # 修改时区(可选, 嵌入式设备应该将此行写入 /etc/profile 中)
 export TZ="UTC-08:00"
 
@@ -79,8 +151,8 @@ date -u
 # 保存时间到本地（如果有硬件RTC）
 hwclock -w
 EOF
-)   > ${NTP_OUTPUT}/client.sh
-    chmod + x ${NTP_OUTPUT}/client.sh
+)   > ${install_top}/client.sh
+    chmod +x ${install_top}/client.sh
 
 (
     cat<<EOF
@@ -91,14 +163,8 @@ do
     sleep 600
 done
 EOF
-)   > ${NTP_OUTPUT}/client_loop.sh
-    chmod + x ${NTP_OUTPUT}/client_loop.sh
-
-}
-
-gen_ntp_server_usage()
-{
-    network_ip=`echo ${CONFIG_NTP_SERVER_IP%.*}.0`
+)   > ${install_top}/client_loop.sh
+    chmod +x ${install_top}/client_loop.sh
 
 (
     cat<<EOF
@@ -143,7 +209,7 @@ keys /etc/ntp/keys
 ### 引入指定目录下的配置
 ## includefile /etc/ntp/crypto/pw
 EOF
-)   > ${NTP_OUTPUT}/ntpd.conf
+)   > ${install_top}/ntpd.conf
 
 
 (
@@ -163,35 +229,33 @@ touch    $CONFIG_NTP_SERVER_LOGFILE
 ./bin/ntpd -c ntpd.conf
 sleep 2; cat $CONFIG_NTP_SERVER_LOGFILE
 EOF
-)   > ${NTP_OUTPUT}/server.sh
-    chmod + x ${NTP_OUTPUT}/server.sh
+)   > ${install_top}/server.sh
+    chmod +x ${install_top}/server.sh
 
 }
 
 make_ntp ()
 {
-    if [ -z "$CONFIG_NTP_SERVER_IP" ];then
-        export CONFIG_NTP_SERVER_IP="$CONFIG_NTP_SERVER_IP_DEFAULT"
-    fi
-    if [ -z "$CONFIG_NTP_OTHER_SERVER_IP" ];then
-        export CONFIG_NTP_OTHER_SERVER_IP="$CONFIG_NTP_OTHER_SERVER_IP_DEFAULT"
-    fi
-    if [ -z "$CONFIG_NTP_SERVER_DRIFTFILE" ];then
-        export CONFIG_NTP_SERVER_DRIFTFILE="$CONFIG_NTP_SERVER_DRIFTFILE_DEFAULT"
-    fi
-
-    if [ -z "$CONFIG_NTP_SERVER_PIDFILE" ];then
-        export CONFIG_NTP_SERVER_PIDFILE="$CONFIG_NTP_SERVER_PIDFILE_DEFAULT"
-    fi
-    if [ -z "$CONFIG_NTP_SERVER_LOGFILE" ];then
-        export CONFIG_NTP_SERVER_LOGFILE="$CONFIG_NTP_SERVER_LOGFILE_DEFAULT"
-    fi
-
+    _sync_export_var_udhcp
     download_ntp
     tar_package
-    make_ssl  || { echo >&2 "make_ssl "; exit 1; }
+    if [ "$OPENSSL_FOR_NTP" = "yes" ];then
+        make_openssl
+    fi
     mk_ntp  || { echo >&2 "mk_ntp "; exit 1; }
-    gen_ntp_client_usage
-    gen_ntp_server_usage
+    gen_ntp_usage $NTP_OUTPUT_PATH
+}
+
+make_ntp_host ()
+{
+    _sync_export_var_udhcp
+    download_ntp
+    tar_package
+    if [ "$OPENSSL_FOR_NTP" = "yes" ];then
+        make_openssl_host
+    fi
+
+    mk_ntp host || { echo >&2 "mk_ntp host"; exit 1; }
+    gen_ntp_usage $NTP_OUTPUT_PATH_HOST
 }
 
