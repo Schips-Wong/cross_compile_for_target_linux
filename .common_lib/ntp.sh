@@ -91,8 +91,8 @@ mk_ntp () {
         make_for_host_part_arg_gcc="LD=${_LD} CC=${_CC}"
         build_type="target"
     fi
-    if [ "$CONFIG_OPENSSL_STATIC_BULID" != "n" ]; then
-        make_for_cflags_part_arg=""
+    if [ "$OPENSSL_FOR_NTP" != "yes" ]; then
+        make_for_cflags_part_arg="CFLAGS=\"-ldl -fPIC\""
     else
         make_for_cflags_part_arg="CFLAGS=\"-L${openssl_dir}/lib -I${openssl_dir}/include -lssl -lcrypto -ldl -fPIC\""
     fi
