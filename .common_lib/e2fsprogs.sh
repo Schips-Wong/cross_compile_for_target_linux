@@ -29,7 +29,7 @@ function mk_e2fsprogs () {
 cat<<EOF
     CC=${_CC} ./configure --host=arm-linux --enable-elf-shlibs --prefix=${E2FSPROGS_OUTPUT_PATH} --without-libintl-prefix
 
-    make $MKTHD && make install-libs
+    make $MKTHD && make install-libs LDCONFIG=echo
     mkdir ${E2FSPROGS_OUTPUT_PATH}/include/uuid -p
     cp lib/uuid/uuid.h ${E2FSPROGS_OUTPUT_PATH}/include/uuid
 EOF
