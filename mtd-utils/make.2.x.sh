@@ -12,15 +12,14 @@ source ../.common
 
 MTD_UTILS=mtd-utils-2.0.0-rc2
 LZO=lzo-2.08
-E2FSPROGS=e2fsprogs-1.42.12
+E2FSPROGS=e2fsprogs-1.47.3
 
 download_package () {
     cd ${BASE}/compressed
 
     tget https://www.zlib.net/${ZLIB}.tar.gz
     tget http://www.oberhumer.com/opensource/lzo/download/${LZO}.tar.gz
-    #tget https://jaist.dl.sourceforge.net/project/e2fsprogs/e2fsprogs/1.41.14/${E2FSPROGS}.tar.gz
-    tget https://jaist.dl.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.42.12/e2fsprogs-1.42.12.tar.gz
+    tget_and_rename https://github.com/tytso/e2fsprogs/archive/refs/tags/v1.47.3.tar.gz e2fsprogs-1.47.3.tar.gz
     tget ftp://ftp.infradead.org/pub/mtd-utils/${MTD_UTILS}.tar.bz2
 }
 
