@@ -1,39 +1,47 @@
+E2FSPROGS=e2fsprogs
+export CONFIG_E2FSPROGS_VERSION=1.47.3
+export E2FSPROGS_VERSION=${E2FSPROGS}-${CONFIG_E2FSPROGS_VERSION}
 
-CONFIG_E2FSPROGS_VERSION=1.45.6
-E2FSPROGS_VERSION=e2fsprogs-$CONFIG_E2FSPROGS_VERSION
-export E2FSPROGS_OUTPUT_PATH=${OUTPUT_PATH}/e2fsprogs
+export E2FSPROGS_OUTPUT_PATH=${OUTPUT_PATH}/${E2FSPROGS}
 
-download_e2fsprogs () {
-    tget https://udomain.dl.sourceforge.net/project/e2fsprogs/e2fsprogs/v${CONFIG_E2FSPROGS_VERSION}/e2fsprogs-${CONFIG_E2FSPROGS_VERSION}.tar.gz
+function _sync_export_var_e2fsprogs()
+{
+    export E2FSPROGS_VERSION=${E2FSPROGS}-${CONFIG_E2FSPROGS_VERSION}
+}
+
+function download_e2fsprogs () {
+    _sync_export_var_e2fsprogs
+    tget_and_rename https://github.com/tytso/e2fsprogs/archive/refs/tags/v${CONFIG_E2FSPROGS_VERSION}.tar.gz e2fsprogs-${CONFIG_E2FSPROGS_VERSION}.tar.gz
+}
+function get_e2fsprogs () {
+    download_e2fsprogs
 }
 
 function mk_e2fsprogs () {
-function _make_sh () {
-cat<<EOF
-    CC=${BUILD_HOST_}gcc ../configure --host=arm-linux --enable-elf-shlibs \
-        --prefix=${E2FSPROGS_OUTPUT_PATH}/ \
-        --datadir=${E2FSPROGS_OUTPUT_PATH}/doc \
-        --with-udev-rules-dir=${E2FSPROGS_OUTPUT_PATH} \
-        --with-crond-dir=${E2FSPROGS_OUTPUT_PATH} \
-        --with-systemd-unit-dir=${E2FSPROGS_OUTPUT_PATH}
-EOF
-}
+	sh_file=build_${E2FSPROGS}.sh
+
+    _sync_export_var_e2fsprogs
 
     cd ${CODE_PATH}/${E2FSPROGS_VERSION}
 
-    mkdir configure_dir -p
-    cd configure_dir
+    # 编译安装 e2fsprogs
+(
+cat<<EOF
+    CC=${_CC} ./configure --host=arm-linux --enable-elf-shlibs --prefix=${E2FSPROGS_OUTPUT_PATH} --without-libintl-prefix
 
-    _make_sh > $tmp_config
-    source ./$tmp_config || return 1
+    make $MKTHD && make install-libs
+    mkdir ${E2FSPROGS_OUTPUT_PATH}/include/uuid -p
+    cp lib/uuid/uuid.h ${E2FSPROGS_OUTPUT_PATH}/include/uuid
+EOF
+) > ${sh_file}
 
-    make clean
-    make  $MKTHD && make install
+    source ./${sh_file} || return 1
 }
 
-function make_e2fsprogs ()
-{
-    download_e2fsprogs  || return 1
-    tar_package  || return 1
-    mk_e2fsprogs  || return 1
+function make_e2fsprogs () {
+    _sync_export_var_e2fsprogs
+    get_e2fsprogs
+    tar_package       || return 1
+    mk_e2fsprogs
 }
+
