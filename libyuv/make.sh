@@ -9,3 +9,4 @@ source ../.common
 
 
 make_libyuv
+make_libyuv_host
