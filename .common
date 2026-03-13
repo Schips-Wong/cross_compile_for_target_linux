@@ -172,6 +172,7 @@ function tgit () { #try git and tar
     fi
 
     add_download_mark ${filename}
+    add_download_mark ${filename}.tgz
     echo "[OK] Cloned [${filename}] "
 }
 # 下载git指定分支并拉取子模块
