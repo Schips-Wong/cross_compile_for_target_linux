@@ -12,17 +12,20 @@ download_libyuv () {
 _mk_libyuv () {
     local type="$1"
     local istall_path="$2"
-	sh_file=build_${LIBYUV}.sh
+
+    local sh_file=build_${LIBYUV}.sh
 
     local cc_arg=""
     if [ "$type" != "target" ];then
         cc_arg=""
+        sh_file=build_${LIBYUV}.host.sh
     else
         cc_arg="CROSS_COMPILE=${BUILD_HOST_}"
+        sh_file=build_${LIBYUV}.target.sh
     fi
+    cd ${CODE_PATH}/libyuv || return 1
 (
    cat <<EOF
-    cd ${CODE_PATH}/libyuv* || return 1
 
     local LIBYUV_DIR=\`pwd\`
 
