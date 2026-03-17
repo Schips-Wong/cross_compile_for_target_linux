@@ -9,7 +9,7 @@ export LIVE555_OUTPUT_PATH=${OUTPUT_PATH}/${LIVE555}
 
 function get_live555 () {
     if [ "$CONFIG_LIVE555_VERSION" = "latest" ]; then
-        tget http://www.live555.com/liveMedia/public/${LIVE555_VERSION}.tar.gz
+        tget https://download.live555.com/live555-latest.tar.gz
     else
         tget https://download.videolan.org/pub/contrib/live555/live.${CONFIG_LIVE555_VERSION}.tar.gz
     fi
