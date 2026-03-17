@@ -164,7 +164,7 @@ function tgit () { #try git and tar
     cd ${ARCHIVE_PATH}
     echo "Clone [${filename}]..."
     if [ ! -f ${filename}.tgz ];then
-        git clone $1
+        git clone $1  --single-branch --depth=1
         rm ${filename}/.git* -rf
         echo "Making a tar file."
         tar -zcf ${filename}.tgz ${filename}
@@ -182,7 +182,7 @@ function tgit_with_bracnch_and_submod () { #try git and tar
     local arg_for_git_clone=""
 
     if [ ! -z "$branch" ];then
-        arg_for_git_clone="-b $branch --single-branch "
+        arg_for_git_clone="-b $branch --single-branch --depth=1 --recursive"
     else
         branch=master
     fi
